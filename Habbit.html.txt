@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recovery & Focus Hub</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --text-main: #2d3748;
+            --accent-focus: #4a90e2;
+            --accent-rest: #48bb78;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container { width: 100%; max-width: 500px; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+
+        h2 { margin-top: 0; font-size: 1.25rem; border-bottom: 2px solid var(--bg-color); padding-bottom: 10px; }
+
+        /* Timer Styles */
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 15px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .mode-indicator {
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            color: var(--accent-focus);
+        }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        button:active { transform: scale(0.98); }
+        .btn-primary { background: var(--accent-focus); color: white; }
+        .btn-secondary { background: var(--accent-rest); color: white; }
+        .btn-outline { background: var(--bg-color); color: var(--text-main); }
+
+        /* List Styles */
+        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg-color);
+            margin-bottom: 8px;
+            border-radius: 8px;
+        }
+
+        .strikethrough { text-decoration: line-through; opacity: 0.5; }
+        .delete-btn { color: #e53e3e; background: none; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <div id="modeLabel" class="mode-indicator">Focus Phase</div>
+        <div class="timer-display" id="display">25:00</div>
+        
+        <div class="btn-grid">
+            <button class="btn-primary" onclick="switchMode(25, 'Focus Phase', '#4a90e2')">Focus (25m)</button>
+            <button class="btn-secondary" onclick="switchMode(15, 'Recovery Rest', '#48bb78')">Rest (15m)</button>
+        </div>
+        
+        <div class="btn-grid" style="grid-template-columns: 2fr 1fr;">
+            <button class="btn-outline" id="startBtn" onclick="toggleTimer()">Start</button>
+            <button class="btn-outline" onclick="resetTimer()">Reset</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>To-Do List</h2>
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="Add a habit or task...">
+            <button class="btn-primary" onclick="addTask()">Add</button>
+        </div>
+        <div id="taskList"></div>
+    </div>
+
+    <div class="card">
+        <h2>Reminders</h2>
+        <div class="input-group">
+            <input type="time" id="remTime">
+            <select id="remType" style="border-radius:8px; border:1px solid var(--border); padding:5px;">
+                <option value="Daily">Daily</option>
+                <option value="Weekly">Weekly</option>
+            </select>
+            <button class="btn-primary" onclick="addReminder()">Set</button>
+        </div>
+        <div id="reminderList"></div>
+    </div>
+</div>
+
+<script>
+    // --- TIMER STATE ---
+    let timeLeft = 1500;
+    let timerId = null;
+    let isRunning = false;
+
+    function updateDisplay() {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        document.getElementById('display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function switchMode(mins, label, color) {
+        clearInterval(timerId);
+        isRunning = false;
+        timeLeft = mins * 60;
+        document.getElementById('modeLabel').innerText = label;
+        document.getElementById('modeLabel').style.color = color;
+        document.getElementById('startBtn').innerText = 'Start';
+        updateDisplay();
+    }
+
+    function toggleTimer() {
+        if (isRunning) {
+            clearInterval(timerId);
+            document.getElementById('startBtn').innerText = 'Resume';
+        } else {
+            timerId = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    alert("Time interval complete!");
+                }
+            }, 1000);
+            document.getElementById('startBtn').innerText = 'Pause';
+        }
+        isRunning = !isRunning;
+    }
+
+    function resetTimer() {
+        clearInterval(timerId);
+        isRunning = false;
+        timeLeft = 1500; 
+        updateDisplay();
+        document.getElementById('startBtn').innerText = 'Start';
+    }
+
+    // --- DATA PERSISTENCE ---
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+
+    function saveData() {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        localStorage.setItem('reminders', JSON.stringify(reminders));
+        renderTasks();
+        renderReminders();
+    }
+
+    // --- TASK LOGIC ---
+    function addTask() {
+        const val = document.getElementById('taskInput').value;
+        if (!val) return;
+        tasks.push({ text: val, done: false });
+        document.getElementById('taskInput').value = '';
+        saveData();
+    }
+
+    function renderTasks() {
+        const container = document.getElementById('taskList');
+        container.innerHTML = tasks.map((t, i) => `
+            <div class="item">
+                <span class="${t.done ? 'strikethrough' : ''}" onclick="toggleTask(${i})" style="cursor:pointer">
+                    ${t.done ? '✓' : '○'} ${t.text}
+                </span>
+                <button class="delete-btn" onclick="deleteTask(${i})">×</button>
+            </div>
+        `).join('');
+    }
+
+    function toggleTask(i) { tasks[i].done = !tasks[i].done; saveData(); }
+    function deleteTask(i) { tasks.splice(i, 1); saveData(); }
+
+    // --- REMINDER LOGIC ---
+    function addReminder() {
+        const time = document.getElementById('remTime').value;
+        const type = document.getElementById('remType').value;
+        if (!time) return;
+        reminders.push({ time, type });
+        saveData();
+    }
+
+    function renderReminders() {
+        const container = document.getElementById('reminderList');
+        container.innerHTML = reminders.map((r, i) => `
+            <div class="item">
+                <span>🔔 ${r.time} (${r.type})</span>
+                <button class="delete-btn" onclick="deleteRem(${i})">×</button>
+            </div>
+        `).join('');
+    }
+
+    function deleteRem(i) { reminders.splice(i, 1); saveData(); }
+
+    // Background check for reminders
+    setInterval(() => {
+        const now = new Date();
+        const cur = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        reminders.forEach(r => {
+            if (r.time === cur && now.getSeconds() === 0) {
+                alert(`Reminder: ${r.type} check-in!`);
+            }
+        });
+    }, 1000);
+
+    // Init
+    renderTasks();
+    renderReminders();
+</script>
+</body>
+</html>
